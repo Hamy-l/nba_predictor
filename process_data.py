@@ -1,302 +1,158 @@
 """
-Data processing utilities for NBA game prediction
-Handles CSV data operations and team statistics calculations
+Data processing utilities for NBA game prediction.
+
+Layering: :class:`~nba_core.data.BoxScoreRepository` owns file access and
+slicing; :class:`NBADataProcessor` adds the rolling-form aggregation and the
+display formatting used by the fusion workflow.
 """
 
-import pandas as pd
+from __future__ import annotations
+
 import numpy as np
-from datetime import datetime, timedelta
+import pandas as pd
+
+from constants import MODULE2_STAT_COLUMNS
+from nba_core.data import BoxScoreRepository
+
+__all__ = ["NBADataProcessor", "DISPLAY_MAP"]
+
+#: Human-readable labels for the differential columns.
+DISPLAY_MAP = {
+    "diff_PTS": "Points Differential",
+    "diff_FGM": "Field Goals Made",
+    "diff_FGA": "Field Goal Attempts",
+    "diff_FG%": "Field Goal %",
+    "diff_3PM": "3-Point Made",
+    "diff_3PA": "3-Point Attempts",
+    "diff_3P%": "3-Point %",
+    "diff_FTM": "Free Throws Made",
+    "diff_FTA": "Free Throw Attempts",
+    "diff_FT%": "Free Throw %",
+    "diff_OREB": "Offensive Rebounds",
+    "diff_DREB": "Defensive Rebounds",
+    "diff_REB": "Total Rebounds",
+    "diff_AST": "Assists",
+    "diff_STL": "Steals",
+    "diff_BLK": "Blocks",
+    "diff_TOV": "Turnovers",
+    "diff_PF": "Personal Fouls",
+    "win_rate": "Win Rate",
+    "games_played": "Games Played",
+}
+
+
+class FormAggregator:
+    """Rolling-form statistics for a single team."""
+
+    def __init__(self, columns=MODULE2_STAT_COLUMNS):
+        self.columns = tuple(columns)
+
+    def summarise(self, recent_games: pd.DataFrame, team_name: str,
+                  window: int) -> dict:
+        averages: dict[str, float] = {}
+
+        for column in self.columns:
+            if column not in recent_games.columns:
+                continue
+            averages[column] = float(np.mean(self._oriented(recent_games, team_name, column)))
+
+        averages["win_rate"] = self._win_rate(recent_games, team_name, window)
+        averages["games_played"] = int(len(recent_games))
+        return averages
+
+    @staticmethod
+    def _oriented(recent_games: pd.DataFrame, team_name: str, column: str) -> list[float]:
+        """Sign-adjust a differential column so it is always pro-team."""
+        values: list[float] = []
+        for _, game in recent_games.iterrows():
+            if game["h_team_name"] == team_name:
+                values.append(game[column])
+            else:
+                values.append(-game[column])
+        return values
+
+    @staticmethod
+    def _win_rate(recent_games: pd.DataFrame, team_name: str, window: int) -> float:
+        wins = 0
+        for _, game in recent_games.iterrows():
+            if game["h_team_name"] == team_name and game["home_win"] == 1:
+                wins += 1
+            elif game["o_team_name"] == team_name and game["home_win"] == 0:
+                wins += 1
+        return wins / window if window else 0.0
 
 
 class NBADataProcessor:
-    """Process NBA historical data for game predictions"""
+    """Facade over the historical dataset used by the fusion workflow."""
 
-    def __init__(self, csv_path):
-        """
-        Initialize data processor
-
-        Args:
-            csv_path: Path to NBA historical data CSV file
-        """
+    def __init__(self, csv_path: str):
         self.csv_path = csv_path
-        self.df = None
-        self._load_data()
+        self.repository = BoxScoreRepository(csv_path)
+        self.aggregator = FormAggregator()
+        self.df = self.repository.frame
 
-    def _load_data(self):
-        """Load CSV data"""
-        try:
-            self.df = pd.read_csv(self.csv_path)
-            self.df['date'] = pd.to_datetime(self.df['date'])
-        except Exception as e:
-            raise Exception(f"Failed to load data: {str(e)}")
+    # -- reference data -----------------------------------------------------
 
-    def get_available_seasons(self):
-        """Get all available seasons"""
-        if self.df is None:
-            return []
-        return sorted(self.df['season'].unique().tolist())
+    def get_available_seasons(self) -> list[str]:
+        return self.repository.seasons()
 
-    def get_teams_by_season(self, season):
-        """
-        Get all teams in a specific season
+    def get_teams_by_season(self, season: str) -> list[str]:
+        return self.repository.teams(season)
 
-        Args:
-            season: Season string (e.g., '2024-25')
+    def get_game_dates(self, season: str, home_team: str, away_team: str) -> list[str]:
+        window = self.repository.matchups(season, home_team, away_team)
+        return sorted(window["date"].dt.strftime("%Y-%m-%d").tolist())
 
-        Returns:
-            List of team names
-        """
-        if self.df is None:
-            return []
+    def get_game_data(self, season: str, home_team: str, away_team: str,
+                      game_date: str) -> dict | None:
+        return self.repository.game(season, home_team, away_team, game_date)
 
-        season_data = self.df[self.df['season'] == season]
-        home_teams = set(season_data['h_team_name'].unique())
-        away_teams = set(season_data['o_team_name'].unique())
-        all_teams = sorted(list(home_teams.union(away_teams)))
+    # -- rolling form -------------------------------------------------------
 
-        return all_teams
+    def get_team_recent_games(self, team_name: str, before_date,
+                              num_games: int = 10) -> pd.DataFrame:
+        return self.repository.team_games(team_name, before_date, num_games)
 
-    def get_game_dates(self, season, home_team, away_team):
-        """
-        Get all game dates between two teams in a season
-
-        Args:
-            season: Season string
-            home_team: Home team name
-            away_team: Away team name
-
-        Returns:
-            List of game dates
-        """
-        if self.df is None:
-            return []
-
-        games = self.df[
-            (self.df['season'] == season) &
-            (self.df['h_team_name'] == home_team) &
-            (self.df['o_team_name'] == away_team)
-        ]
-
-        dates = sorted(games['date'].dt.strftime('%Y-%m-%d').tolist())
-        return dates
-
-    def get_game_data(self, season, home_team, away_team, game_date):
-        """
-        Get specific game data
-
-        Args:
-            season: Season string
-            home_team: Home team name
-            away_team: Away team name
-            game_date: Game date string (YYYY-MM-DD)
-
-        Returns:
-            Dictionary containing game data or None
-        """
-        if self.df is None:
+    def calculate_team_avg_stats(self, team_name: str, before_date,
+                                 num_games: int = 10) -> dict | None:
+        recent = self.repository.team_games(team_name, before_date, num_games)
+        if len(recent) == 0:
             return None
+        return self.aggregator.summarise(recent, team_name, len(recent))
 
-        game_date_dt = pd.to_datetime(game_date)
+    def get_head_to_head(self, team1: str, team2: str, before_date,
+                         num_games: int = 5) -> pd.DataFrame:
+        return self.repository.head_to_head(team1, team2, before_date, num_games)
 
-        game = self.df[
-            (self.df['season'] == season) &
-            (self.df['h_team_name'] == home_team) &
-            (self.df['o_team_name'] == away_team) &
-            (self.df['date'] == game_date_dt)
-        ]
+    # -- assembly -----------------------------------------------------------
 
-        if len(game) == 0:
-            return None
-
-        return game.iloc[0].to_dict()
-
-    def get_team_recent_games(self, team_name, before_date, num_games=10):
-        """
-        Get recent games for a team before a specific date
-
-        Args:
-            team_name: Team name
-            before_date: Date string or datetime object
-            num_games: Number of recent games to retrieve (default 10)
-
-        Returns:
-            DataFrame containing recent games
-        """
-        if self.df is None:
-            return pd.DataFrame()
-
-        if isinstance(before_date, str):
-            before_date = pd.to_datetime(before_date)
-
-        # Get games where team was home or away
-        team_games = self.df[
-            ((self.df['h_team_name'] == team_name) |
-             (self.df['o_team_name'] == team_name)) &
-            (self.df['date'] < before_date)
-        ].sort_values('date', ascending=False)
-
-        return team_games.head(num_games)
-
-    def calculate_team_avg_stats(self, team_name, before_date, num_games=10):
-        """
-        Calculate average statistics for a team based on recent games
-
-        Args:
-            team_name: Team name
-            before_date: Date before which to calculate stats
-            num_games: Number of recent games to use (default 10)
-
-        Returns:
-            Dictionary containing average statistics
-        """
-        recent_games = self.get_team_recent_games(team_name, before_date, num_games)
-
-        if len(recent_games) == 0:
-            return None
-
-        # Define stat columns to calculate
-        stat_cols = [
-            'diff_PTS', 'diff_FGM', 'diff_FGA', 'diff_FG%',
-            'diff_3PM', 'diff_3PA', 'diff_3P%',
-            'diff_FTM', 'diff_FTA', 'diff_FT%',
-            'diff_OREB', 'diff_DREB', 'diff_REB',
-            'diff_AST', 'diff_STL', 'diff_BLK', 'diff_TOV', 'diff_PF'
-        ]
-
-        avg_stats = {}
-
-        for col in stat_cols:
-            if col not in recent_games.columns:
-                continue
-
-            # Adjust sign based on whether team was home or away
-            values = []
-            for _, game in recent_games.iterrows():
-                if game['h_team_name'] == team_name:
-                    # Team was home, use value as is
-                    values.append(game[col])
-                else:
-                    # Team was away, negate the value
-                    values.append(-game[col])
-
-            avg_stats[col] = np.mean(values) if values else 0
-
-        # Calculate win rate
-        wins = 0
-        for _, game in recent_games.iterrows():
-            if game['h_team_name'] == team_name and game['home_win'] == 1:
-                wins += 1
-            elif game['o_team_name'] == team_name and game['home_win'] == 0:
-                wins += 1
-
-        avg_stats['win_rate'] = wins / len(recent_games) if len(recent_games) > 0 else 0
-        avg_stats['games_played'] = len(recent_games)
-
-        return avg_stats
-
-    def prepare_prediction_data(self, season, home_team, away_team, game_date):
-        """
-        Prepare structured data for game prediction
-
-        Args:
-            season: Season string
-            home_team: Home team name
-            away_team: Away team name
-            game_date: Game date string
-
-        Returns:
-            Dictionary containing game data and team statistics
-        """
-        # Get current game data if exists
-        game_data = self.get_game_data(season, home_team, away_team, game_date)
-
-        # Get recent performance for both teams
-        home_stats = self.calculate_team_avg_stats(home_team, game_date, num_games=10)
-        away_stats = self.calculate_team_avg_stats(away_team, game_date, num_games=10)
-
-        result = {
-            'season': season,
-            'game_date': game_date,
-            'home_team': home_team,
-            'away_team': away_team,
-            'game_data': game_data,
-            'home_recent_stats': home_stats,
-            'away_recent_stats': away_stats
+    def prepare_prediction_data(self, season: str, home_team: str, away_team: str,
+                                game_date: str) -> dict:
+        return {
+            "season": season,
+            "game_date": game_date,
+            "home_team": home_team,
+            "away_team": away_team,
+            "game_data": self.get_game_data(season, home_team, away_team, game_date),
+            "home_recent_stats": self.calculate_team_avg_stats(home_team, game_date, 10),
+            "away_recent_stats": self.calculate_team_avg_stats(away_team, game_date, 10),
         }
 
-        return result
+    # -- presentation -------------------------------------------------------
 
-    def format_stats_for_display(self, stats):
-        """
-        Format statistics dictionary for display
-
-        Args:
-            stats: Statistics dictionary
-
-        Returns:
-            Formatted dictionary with readable keys
-        """
+    @staticmethod
+    def format_stats_for_display(stats: dict | None) -> dict:
+        """Render a statistics dictionary with readable labels."""
         if stats is None:
             return {}
 
-        display_map = {
-            'diff_PTS': 'Points Differential',
-            'diff_FGM': 'Field Goals Made',
-            'diff_FGA': 'Field Goal Attempts',
-            'diff_FG%': 'Field Goal %',
-            'diff_3PM': '3-Point Made',
-            'diff_3PA': '3-Point Attempts',
-            'diff_3P%': '3-Point %',
-            'diff_FTM': 'Free Throws Made',
-            'diff_FTA': 'Free Throw Attempts',
-            'diff_FT%': 'Free Throw %',
-            'diff_OREB': 'Offensive Rebounds',
-            'diff_DREB': 'Defensive Rebounds',
-            'diff_REB': 'Total Rebounds',
-            'diff_AST': 'Assists',
-            'diff_STL': 'Steals',
-            'diff_BLK': 'Blocks',
-            'diff_TOV': 'Turnovers',
-            'diff_PF': 'Personal Fouls',
-            'win_rate': 'Win Rate',
-            'games_played': 'Games Played'
-        }
-
-        formatted = {}
+        formatted: dict[str, str] = {}
         for key, value in stats.items():
-            display_key = display_map.get(key, key)
-            if key == 'win_rate':
-                formatted[display_key] = f"{value * 100:.1f}%"
+            label = DISPLAY_MAP.get(key, key)
+            if key == "win_rate":
+                formatted[label] = f"{value * 100:.1f}%"
             elif isinstance(value, float):
-                formatted[display_key] = f"{value:.2f}"
+                formatted[label] = f"{value:.2f}"
             else:
-                formatted[display_key] = str(value)
-
+                formatted[label] = str(value)
         return formatted
-
-    def get_head_to_head(self, team1, team2, before_date, num_games=5):
-        """
-        Get head-to-head matchup history between two teams
-
-        Args:
-            team1: First team name
-            team2: Second team name
-            before_date: Date before which to look
-            num_games: Number of recent matchups (default 5)
-
-        Returns:
-            DataFrame of head-to-head games
-        """
-        if self.df is None:
-            return pd.DataFrame()
-
-        if isinstance(before_date, str):
-            before_date = pd.to_datetime(before_date)
-
-        h2h_games = self.df[
-            (((self.df['h_team_name'] == team1) & (self.df['o_team_name'] == team2)) |
-             ((self.df['h_team_name'] == team2) & (self.df['o_team_name'] == team1))) &
-            (self.df['date'] < before_date)
-        ].sort_values('date', ascending=False)
-
-        return h2h_games.head(num_games)

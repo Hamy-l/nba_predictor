@@ -1,0 +1,36 @@
+# ---- IDE / OS ----
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+desktop.ini
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ---- Local tooling (created by .tools/vendor_deps.py) ----
+vendor_lib/
+wheel_cache/
+.pytmp/
+.pydeps/
+.wheels/
+.tools/smoke.log
+
+# ---- Runtime artefacts ----
+uploads/*.csv
+uploads/*.xlsx
+uploads/*.xls
+!uploads/.gitkeep
+trained_models/
+*.pkl
+*.pth
+*.log
+
+# ---- Secrets ----
+.env
+.env.local

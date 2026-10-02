@@ -1,5 +1,16 @@
-flask
-pandas
-numpy
-openpyxl
-requests
+# Web tier
+flask>=3.0
+openpyxl>=3.1
+
+# Data layer
+pandas>=2.0
+numpy>=1.26
+requests>=2.31
+
+# ---------------------------------------------------------------
+# Optional: required only for training / retraining the estimators
+# in model_code/. The web application itself does not import them.
+# ---------------------------------------------------------------
+# scikit-learn>=1.4
+# torch>=2.2
+# joblib>=1.3
