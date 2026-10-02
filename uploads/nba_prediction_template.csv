@@ -1,0 +1,3 @@
+﻿h_team_name,o_team_name,diff_MIN,diff_PTS,diff_FGM,diff_FGA,diff_FG%,diff_3PM,diff_3PA,diff_3P%,diff_FTM,diff_FTA,diff_FT%,diff_OREB,diff_DREB,diff_REB,diff_AST,diff_STL,diff_BLK,diff_TOV,diff_PF,diff_+/-
+Los Angeles Lakers,Boston Celtics,0.0,5.0,2.0,8.0,0.05,1.0,3.0,0.08,4.0,5.0,0.1,2.0,3.0,5.0,3.0,1.0,2.0,-2.0,1.0,10.0
+Golden State Warriors,Denver Nuggets,0.0,-3.0,-1.0,-5.0,-0.03,-2.0,-4.0,-0.05,-2.0,-3.0,-0.07,-1.0,-2.0,-3.0,-2.0,0.0,-1.0,1.0,-1.0,-6.0

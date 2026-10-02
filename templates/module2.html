@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Multi-Source Data Fusion Prediction</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-weight: 300;
+            background: #F7F4EF;
+            color: #1F2421;
+            line-height: 1.6;
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            background: rgba(251, 249, 245, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid #E7E1D7;
+            padding: 1rem 2rem;
+            z-index: 100;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 400;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-title em {
+            font-style: italic;
+            color: #C4612F;
+        }
+
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 1.5rem;
+        }
+
+        .nav-links a {
+            color: #5C635D;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: #C4612F;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            background: #F2E3D6;
+            color: #C4612F;
+            padding: 0.4rem 1rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.02em;
+        }
+
+        .hero-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 400;
+            letter-spacing: -0.03em;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero-title em {
+            font-style: italic;
+            color: #C4612F;
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: #5C635D;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid #E7E1D7;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: #5C635D;
+            margin-bottom: 0.5rem;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #E7E1D7;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: Inter, sans-serif;
+            background: #FBF9F5;
+            color: #1F2421;
+            transition: border-color 0.2s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #C4612F;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .btn {
+            background: #C4612F;
+            color: #FFFFFF;
+            border: none;
+            padding: 0.875rem 2rem;
+            border-radius: 999px;
+            font-size: 1rem;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            font-family: Inter, sans-serif;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: #A94E22;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(196, 97, 47, 0.3);
+        }
+
+        .btn:disabled {
+            background: #E7E1D7;
+            color: #5C635D;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.show {
+            display: block;
+        }
+
+        /* Structured Data Section */
+        .stats-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .team-stats {
+            background: #FBF9F5;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #E7E1D7;
+        }
+
+        .team-stats h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            margin-bottom: 1rem;
+            color: #C4612F;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #E7E1D7;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #5C635D;
+            font-size: 0.9rem;
+        }
+
+        .stat-value-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 80px;
+            justify-content: flex-end;
+        }
+
+        .stat-value {
+            font-weight: 500;
+            color: #1F2421;
+            text-align: right;
+            min-width: 60px;
+        }
+
+        .advantage-arrow {
+            font-size: 1.2rem;
+            line-height: 1;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .advantage-arrow.up {
+            color: #C4612F;
+        }
+
+        .advantage-arrow.down {
+            color: #5C635D;
+        }
+
+        .stat-label .tooltip {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: #E7E1D7;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 16px;
+            font-size: 0.75rem;
+            margin-left: 0.25rem;
+            cursor: help;
+            color: #5C635D;
+            position: relative;
+        }
+
+        .stat-label .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 8px);
+            transform: translateX(-50%);
+            background: #1F2421;
+            color: #FFFFFF;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            z-index: 1000;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .stat-label .tooltip:hover::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 2px);
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #1F2421;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .stat-value {
+            font-weight: 500;
+            color: #1F2421;
+        }
+
+        .game-data-box {
+            background: linear-gradient(135deg, #FBF9F5 0%, #F7F4EF 100%);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #E7E1D7;
+        }
+
+        .game-data-box h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .game-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .game-stat-item {
+            background: #FFFFFF;
+            padding: 0.75rem;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #E7E1D7;
+        }
+
+        .game-stat-label {
+            font-size: 0.8rem;
+            color: #5C635D;
+            margin-bottom: 0.25rem;
+        }
+
+        .game-stat-value {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #1F2421;
+        }
+
+        /* Unstructured Data Streaming */
+        .thinking-box {
+            background: #FBF9F5;
+            border: 1px solid #E7E1D7;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-tasks {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .task-card {
+            background: #FFFFFF;
+            border: 1px solid #E7E1D7;
+            border-radius: 8px;
+            padding: 1rem;
+            position: relative;
+        }
+
+        .task-card.loading {
+            border-left: 3px solid #C4612F;
+        }
+
+        .task-card.completed {
+            border-left: 3px solid #5C635D;
+        }
+
+        .task-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .task-title {
+            font-weight: 500;
+            font-size: 0.95rem;
+            flex: 1;
+        }
+
+        .task-content {
+            font-size: 0.9rem;
+            color: #5C635D;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .task-status {
+            font-size: 0.85rem;
+            color: #C4612F;
+            font-style: italic;
+        }
+
+        .collapse-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #E7E1D7;
+        }
+
+        .thinking-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+
+        .thinking-header h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            flex: 1;
+        }
+
+        .collapse-icon {
+            transition: transform 0.3s;
+            color: #5C635D;
+        }
+
+        .collapse-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .thinking-content {
+            color: #5C635D;
+            font-size: 0.95rem;
+            line-height: 1.8;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .thinking-content.collapsed {
+            display: none;
+        }
+
+        .spinner {
+            border: 2px solid #E7E1D7;
+            border-top: 2px solid #C4612F;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+
+        .check-icon {
+            color: #5C635D;
+            font-size: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .prediction-progress {
+            display: none;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #E7E1D7;
+        }
+
+        .prediction-progress.show {
+            display: block;
+        }
+
+        .prediction-progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+            color: #5C635D;
+            font-size: 0.9rem;
+        }
+
+        .prediction-progress-status {
+            min-width: 0;
+        }
+
+        .prediction-progress-percent {
+            flex-shrink: 0;
+            color: #C4612F;
+            font-weight: 500;
+        }
+
+        .prediction-progress .progress-bar {
+            margin-bottom: 0;
+            width: 100%;
+            height: 8px;
+            background: #E7E1D7;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .prediction-progress .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #C4612F 0%, #A94E22 100%);
+            transition: width 0.3s ease;
+            border-radius: 999px;
+        }
+
+        .prediction-progress.failed .prediction-progress-status,
+        .prediction-progress.failed .prediction-progress-percent {
+            color: #721c24;
+        }
+
+        .prediction-progress.completed .prediction-progress-status,
+        .prediction-progress.completed .prediction-progress-percent {
+            color: #5C635D;
+        }
+
+        /* Final Results */
+        .prediction-display {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #FBF9F5 0%, #F7F4EF 100%);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border: 1px solid #E7E1D7;
+        }
+
+        .matchup {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .team {
+            flex: 1;
+            max-width: 200px;
+        }
+
+        .team-name {
+            font-size: 1.25rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .team.winner .team-name {
+            color: #C4612F;
+            font-weight: 600;
+        }
+
+        .probability {
+            font-size: 2rem;
+            font-family: 'Playfair Display', serif;
+            font-weight: 400;
+        }
+
+        .vs {
+            font-size: 1.5rem;
+            color: #5C635D;
+            font-weight: 300;
+        }
+
+        .factors-list {
+            list-style: none;
+        }
+
+        .factor-item {
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background: #FBF9F5;
+            border-radius: 8px;
+            border-left: 3px solid #C4612F;
+        }
+
+        .factor-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .factor-rank {
+            background: #C4612F;
+            color: #FFFFFF;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .factor-name {
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .factor-tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .factor-tag.structured {
+            background: #F2E3D6;
+            color: #C4612F;
+        }
+
+        .factor-tag.unstructured {
+            background: #E7E1D7;
+            color: #5C635D;
+        }
+
+        .factor-description {
+            color: #5C635D;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .summary-box {
+            background: #FBF9F5;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-box h4 {
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+            color: #C4612F;
+        }
+
+        .summary-box p {
+            color: #5C635D;
+            line-height: 1.7;
+        }
+
+        .actual-result {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: #F2E3D6;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-row, .stats-comparison {
+                grid-template-columns: 1fr;
+            }
+
+            .matchup {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .game-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 768px) {
+            .nav {
+                padding: 0.75rem 1rem;
+            }
+
+            .nav-content {
+                align-items: flex-start;
+            }
+
+            .nav-title {
+                font-size: 1.2rem;
+            }
+
+            .nav-links {
+                gap: 0.75rem 1rem;
+            }
+
+            .prediction-progress-header {
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+
+            .form-row, .stats-comparison {
+                grid-template-columns: 1fr;
+            }
+
+            .matchup {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .game-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-content">
+            <div class="nav-title">NBA <em>Prediction</em> Platform</div>
+            <div class="nav-links">
+                <a href="/">Module 1</a>
+                <a href="/module2" class="active" aria-current="page">Module 2</a>
+                <a href="/module3">Module 3</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="hero">
+            <div class="eyebrow">Multi-Source Intelligence</div>
+            <h1 class="hero-title">NBA <em>Multi-Source</em> Data Fusion</h1>
+            <p class="hero-subtitle">Combining structured statistics with real-time news, injuries, and tactical analysis</p>
+        </div>
+
+        <!-- Step 1: Game Selection -->
+        <div class="card" id="selectionCard">
+            <h2 class="card-title">Game Selection</h2>
+            <form id="predictionForm">
+                <div class="form-group">
+                    <label for="season">Season</label>
+                    <select id="season" name="season" required>
+                        <option value="">Select season...</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="homeTeam">Home Team</label>
+                        <select id="homeTeam" name="homeTeam" required>
+                            <option value="">Select home team...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="awayTeam">Away Team</label>
+                        <select id="awayTeam" name="awayTeam" required>
+                            <option value="">Select away team...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="gameDate">Game Date</label>
+                    <select id="gameDate" name="gameDate" required>
+                        <option value="">Select game date...</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn" id="predictBtn">Analyze & Predict</button>
+            </form>
+        </div>
+
+        <!-- Step 2: Structured Data Display -->
+        <div id="structuredSection" class="section">
+            <div class="card">
+                <h2 class="card-title">Structured Statistical Data</h2>
+
+                <h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: #5C635D;">Recent 10-Game Average Performance</h3>
+                <div class="stats-comparison">
+                    <div class="team-stats" id="homeStats"></div>
+                    <div class="team-stats" id="awayStats"></div>
+                </div>
+
+                <div class="game-data-box" id="gameDataBox" style="display: none;">
+                    <h3>Selected Game Statistics (Differential: Home - Away)</h3>
+                    <div class="game-stats-grid" id="gameStatsGrid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Unstructured Data Streaming -->
+        <div id="unstructuredSection" class="section">
+            <div class="card">
+                <h2 class="card-title">Searching for Latest Information</h2>
+                <div class="search-tasks" id="searchTasks"></div>
+
+                <div class="collapse-section">
+                    <div class="thinking-header" onclick="toggleThinking()">
+                        <h3>All Search Results</h3>
+                        <span class="collapse-icon collapsed" id="collapseIcon">▼</span>
+                    </div>
+                    <div class="thinking-content collapsed" id="thinkingContent"></div>
+                </div>
+
+                <div class="prediction-progress" id="predictionProgress" aria-live="polite">
+                    <div class="prediction-progress-header">
+                        <span class="prediction-progress-status" id="predictionProgressStatus">Preparing prediction...</span>
+                        <span class="prediction-progress-percent" id="predictionProgressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="AI model prediction progress">
+                        <div class="progress-fill" id="predictionProgressFill" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Final Prediction Results -->
+        <div id="resultsSection" class="section">
+            <div class="card">
+                <h2 class="card-title">Prediction Result</h2>
+                <div class="prediction-display">
+                    <div class="matchup">
+                        <div class="team" id="homeTeamDisplay">
+                            <div class="team-name">Home Team</div>
+                            <div class="probability">50%</div>
+                        </div>
+                        <div class="vs">VS</div>
+                        <div class="team" id="awayTeamDisplay">
+                            <div class="team-name">Away Team</div>
+                            <div class="probability">50%</div>
+                        </div>
+                    </div>
+                    <div id="actualResult"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Top 5 Influencing Factors</h2>
+                <ul class="factors-list" id="factorsList"></ul>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Unstructured Data Summary</h2>
+                <div class="summary-box">
+                    <h4>🏥 Injury Reports</h4>
+                    <p id="injurySummary"></p>
+                </div>
+                <div class="summary-box">
+                    <h4>📰 Pre-game News</h4>
+                    <p id="newsSummary"></p>
+                </div>
+                <div class="summary-box">
+                    <h4>⚡ Tactical Analysis</h4>
+                    <p id="tacticalSummary"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Stat labels with explanations
+        const statExplanations = {
+            'Win Rate': 'Percentage of games won in last 10 matches',
+            'Points Differential': 'Average point difference (positive = outscored opponents)',
+            'Field Goal %': 'Average field goal percentage differential',
+            '3-Point %': 'Average 3-point shooting percentage differential',
+            'Free Throw %': 'Average free throw percentage differential',
+            'Rebounds': 'Average rebound differential per game',
+            'Offensive Rebounds': 'Average offensive rebound differential',
+            'Defensive Rebounds': 'Average defensive rebound differential',
+            'Assists': 'Average assist differential per game',
+            'Steals': 'Average steal differential per game',
+            'Blocks': 'Average block differential per game',
+            'Turnovers': 'Average turnover differential (negative is better)',
+            'Personal Fouls': 'Average personal foul differential',
+            'Games Played': 'Number of recent games analyzed'
+        };
+
+        let currentGameData = {
+            season: '',
+            home_team: '',
+            away_team: '',
+            game_date: '',
+            structured_data: null,
+            raw_unstructured: ''
+        };
+
+        let predictionProgressTimer = null;
+        let predictionProgressValue = 0;
+
+        function resetPredictionProgress() {
+            stopPredictionProgress();
+            predictionProgressValue = 0;
+            const progress = document.getElementById('predictionProgress');
+            const fill = document.getElementById('predictionProgressFill');
+            const percent = document.getElementById('predictionProgressPercent');
+            const status = document.getElementById('predictionProgressStatus');
+            const bar = progress.querySelector('[role="progressbar"]');
+
+            progress.classList.remove('show', 'failed', 'completed');
+            fill.style.width = '0%';
+            percent.textContent = '0%';
+            status.textContent = 'Preparing prediction...';
+            bar.setAttribute('aria-valuenow', '0');
+        }
+
+        function updatePredictionProgress(value, statusText) {
+            predictionProgressValue = Math.min(value, 92);
+            document.getElementById('predictionProgressFill').style.width = `${predictionProgressValue}%`;
+            document.getElementById('predictionProgressPercent').textContent = `${Math.round(predictionProgressValue)}%`;
+            document.getElementById('predictionProgressStatus').textContent = statusText;
+            document.getElementById('predictionProgress').querySelector('[role="progressbar"]').setAttribute('aria-valuenow', Math.round(predictionProgressValue));
+        }
+
+        function startPredictionProgress() {
+            resetPredictionProgress();
+            const progress = document.getElementById('predictionProgress');
+            progress.classList.add('show');
+            updatePredictionProgress(8, 'Performing AI Model Comprehensive Prediction...');
+            predictionProgressTimer = setInterval(() => {
+                if (predictionProgressValue < 92) {
+                    updatePredictionProgress(predictionProgressValue + Math.max(0.5, (92 - predictionProgressValue) * 0.08), 'Performing AI Model Comprehensive Prediction...');
+                }
+            }, 800);
+        }
+
+        function stopPredictionProgress() {
+            if (predictionProgressTimer) {
+                clearInterval(predictionProgressTimer);
+                predictionProgressTimer = null;
+            }
+        }
+
+        function completePredictionProgress(success, statusText) {
+            stopPredictionProgress();
+            const progress = document.getElementById('predictionProgress');
+            progress.classList.toggle('completed', success);
+            progress.classList.toggle('failed', !success);
+            if (success) {
+                predictionProgressValue = 100;
+                document.getElementById('predictionProgressFill').style.width = '100%';
+                document.getElementById('predictionProgressPercent').textContent = '100%';
+                progress.querySelector('[role="progressbar"]').setAttribute('aria-valuenow', '100');
+            }
+            document.getElementById('predictionProgressStatus').textContent = statusText;
+        }
+
+        // Load seasons
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadSeasons();
+        });
+
+        async function loadSeasons() {
+            try {
+                const response = await fetch('/api/module2/seasons');
+                const data = await response.json();
+                if (data.success) {
+                    const seasonSelect = document.getElementById('season');
+                    data.seasons.forEach(season => {
+                        const option = document.createElement('option');
+                        option.value = season;
+                        option.textContent = season;
+                        seasonSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load seasons:', error);
+            }
+        }
+
+        document.getElementById('season').addEventListener('change', async (e) => {
+            const season = e.target.value;
+            if (!season) return;
+
+            const response = await fetch(`/api/module2/teams?season=${encodeURIComponent(season)}`);
+            const data = await response.json();
+
+            if (data.success) {
+                const homeSelect = document.getElementById('homeTeam');
+                const awaySelect = document.getElementById('awayTeam');
+
+                homeSelect.innerHTML = '<option value="">Select home team...</option>';
+                awaySelect.innerHTML = '<option value="">Select away team...</option>';
+
+                data.teams.forEach(team => {
+                    homeSelect.add(new Option(team, team));
+                    awaySelect.add(new Option(team, team));
+                });
+
+                document.getElementById('gameDate').innerHTML = '<option value="">Select game date...</option>';
+            }
+        });
+
+        async function updateGameDates() {
+            const season = document.getElementById('season').value;
+            const homeTeam = document.getElementById('homeTeam').value;
+            const awayTeam = document.getElementById('awayTeam').value;
+
+            if (!season || !homeTeam || !awayTeam) return;
+
+            const response = await fetch(`/api/module2/game_dates?season=${encodeURIComponent(season)}&home_team=${encodeURIComponent(homeTeam)}&away_team=${encodeURIComponent(awayTeam)}`);
+            const data = await response.json();
+
+            const dateSelect = document.getElementById('gameDate');
+            dateSelect.innerHTML = data.success && data.dates.length > 0
+                ? '<option value="">Select game date...</option>' + data.dates.map(d => `<option value="${d}">${d}</option>`).join('')
+                : '<option value="">No games found</option>';
+        }
+
+        document.getElementById('homeTeam').addEventListener('change', updateGameDates);
+        document.getElementById('awayTeam').addEventListener('change', updateGameDates);
+
+        // Main prediction flow
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            currentGameData.season = document.getElementById('season').value;
+            currentGameData.home_team = document.getElementById('homeTeam').value;
+            currentGameData.away_team = document.getElementById('awayTeam').value;
+            currentGameData.game_date = document.getElementById('gameDate').value;
+
+            resetPredictionProgress();
+            document.getElementById('resultsSection').classList.remove('show');
+            document.getElementById('predictBtn').disabled = true;
+            document.getElementById('predictBtn').textContent = 'Analyzing...';
+
+            // Step 1: Get structured data
+            await loadStructuredData();
+
+            // Step 2: Stream unstructured data search
+            await streamUnstructuredData();
+
+            // Step 3: Summarize and predict
+            startPredictionProgress();
+            await finalPrediction();
+
+            document.getElementById('predictBtn').disabled = false;
+            document.getElementById('predictBtn').textContent = 'Analyze & Predict';
+        });
+
+        async function loadStructuredData() {
+            try {
+                const response = await fetch('/api/module2/structured_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentGameData)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    currentGameData.structured_data = data.structured_data;
+                    displayStructuredData(data.structured_data);
+                    document.getElementById('structuredSection').classList.add('show');
+                    document.getElementById('structuredSection').scrollIntoView({ behavior: 'smooth' });
+                }
+            } catch (error) {
+                alert('Failed to load structured data: ' + error.message);
+            }
+        }
+
+        function displayStructuredData(structured) {
+            // Display home team stats
+            const homeStats = document.getElementById('homeStats');
+            homeStats.innerHTML = `<h3>${currentGameData.home_team}</h3>`;
+
+            const homeStatsData = structured.home_stats;
+            const awayStatsData = structured.away_stats;
+
+            for (const [key, value] of Object.entries(homeStatsData)) {
+                const explanation = statExplanations[key] || '';
+
+                // Determine advantage (skip for non-numeric fields like "Games Played")
+                let advantageArrow = '';
+                if (key !== 'Games Played' && awayStatsData[key]) {
+                    const homeVal = parseFloat(value);
+                    const awayVal = parseFloat(awayStatsData[key]);
+
+                    if (!isNaN(homeVal) && !isNaN(awayVal)) {
+                        // For turnovers, lower is better
+                        if (key === 'Turnovers') {
+                            advantageArrow = homeVal < awayVal ? '<span class="advantage-arrow up">↑</span>' : '';
+                        } else {
+                            advantageArrow = homeVal > awayVal ? '<span class="advantage-arrow up">↑</span>' : '';
+                        }
+                    }
+                }
+
+                homeStats.innerHTML += `
+                    <div class="stat-row">
+                        <span class="stat-label">
+                            ${key}
+                            ${explanation ? `<span class="tooltip" data-tooltip="${explanation}">?</span>` : ''}
+                        </span>
+                        <div class="stat-value-container">
+                            <span class="stat-value">${value}</span>
+                            ${advantageArrow}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Display away team stats
+            const awayStats = document.getElementById('awayStats');
+            awayStats.innerHTML = `<h3>${currentGameData.away_team}</h3>`;
+            for (const [key, value] of Object.entries(awayStatsData)) {
+                const explanation = statExplanations[key] || '';
+
+                // Determine advantage
+                let advantageArrow = '';
+                if (key !== 'Games Played' && homeStatsData[key]) {
+                    const awayVal = parseFloat(value);
+                    const homeVal = parseFloat(homeStatsData[key]);
+
+                    if (!isNaN(awayVal) && !isNaN(homeVal)) {
+                        // For turnovers, lower is better
+                        if (key === 'Turnovers') {
+                            advantageArrow = awayVal < homeVal ? '<span class="advantage-arrow up">↑</span>' : '';
+                        } else {
+                            advantageArrow = awayVal > homeVal ? '<span class="advantage-arrow up">↑</span>' : '';
+                        }
+                    }
+                }
+
+                awayStats.innerHTML += `
+                    <div class="stat-row">
+                        <span class="stat-label">
+                            ${key}
+                            ${explanation ? `<span class="tooltip" data-tooltip="${explanation}">?</span>` : ''}
+                        </span>
+                        <div class="stat-value-container">
+                            <span class="stat-value">${value}</span>
+                            ${advantageArrow}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Display game data if available
+            if (structured.game_data) {
+                const gameDataBox = document.getElementById('gameDataBox');
+                const gameStatsGrid = document.getElementById('gameStatsGrid');
+                gameStatsGrid.innerHTML = '';
+
+                for (const [key, value] of Object.entries(structured.game_data)) {
+                    gameStatsGrid.innerHTML += `
+                        <div class="game-stat-item">
+                            <div class="game-stat-label">${key}</div>
+                            <div class="game-stat-value">${value}</div>
+                        </div>
+                    `;
+                }
+
+                gameDataBox.style.display = 'block';
+            }
+        }
+
+        async function streamUnstructuredData() {
+            document.getElementById('unstructuredSection').classList.add('show');
+            document.getElementById('unstructuredSection').scrollIntoView({ behavior: 'smooth' });
+
+            const searchTasks = document.getElementById('searchTasks');
+            const thinkingContent = document.getElementById('thinkingContent');
+            searchTasks.innerHTML = '';
+            thinkingContent.innerHTML = '';
+
+            const taskCards = {};
+            const taskContents = {};
+            let allResults = {};
+
+            try {
+                const response = await fetch('/api/module2/search_unstructured', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentGameData)
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            let jsonData;
+                            try {
+                                jsonData = JSON.parse(line.slice(6));
+                            } catch (parseError) {
+                                // Silently skip malformed JSON chunks - data is already captured in task_complete events
+                                console.warn('Skipped malformed JSON chunk:', parseError.message);
+                                continue;
+                            }
+
+                            if (jsonData.type === 'task_start') {
+                                // Create task card
+                                const card = document.createElement('div');
+                                card.className = 'task-card loading';
+                                card.id = `task-${jsonData.category}`;
+                                card.innerHTML = `
+                                    <div class="task-header">
+                                        <div class="spinner"></div>
+                                        <div class="task-title">${jsonData.title}</div>
+                                    </div>
+                                    <div class="task-status">Searching...</div>
+                                    <div class="task-content"></div>
+                                `;
+                                searchTasks.appendChild(card);
+                                taskCards[jsonData.category] = card;
+                                taskContents[jsonData.category] = '';
+
+                            } else if (jsonData.type === 'task_stream') {
+                                // Stream text chunk to task card
+                                const card = taskCards[jsonData.category];
+                                if (card) {
+                                    taskContents[jsonData.category] += jsonData.chunk;
+                                    const contentDiv = card.querySelector('.task-content');
+                                    const statusDiv = card.querySelector('.task-status');
+                                    const fullText = taskContents[jsonData.category];
+                                    const preview = fullText.substring(0, 300);
+                                    contentDiv.textContent = preview + (fullText.length > 300 ? '...' : '');
+                                    statusDiv.textContent = `Searching... (${fullText.length} chars)`;
+                                }
+
+                            } else if (jsonData.type === 'task_complete') {
+                                // Update task card with completion
+                                const card = taskCards[jsonData.category];
+                                if (card) {
+                                    card.className = 'task-card completed';
+                                    card.querySelector('.task-header').innerHTML = `
+                                        <span class="check-icon">✓</span>
+                                        <div class="task-title">${jsonData.title}</div>
+                                    `;
+                                    const contentDiv = card.querySelector('.task-content');
+                                    const fullText = jsonData.content;
+                                    const preview = fullText.substring(0, 300);
+                                    contentDiv.textContent = preview + (fullText.length > 300 ? '...' : '');
+                                    card.querySelector('.task-status').textContent = `Completed (${fullText.length} chars)`;
+                                }
+
+                                allResults[jsonData.category] = jsonData.content;
+
+                            } else if (jsonData.type === 'task_error') {
+                                const card = taskCards[jsonData.category];
+                                if (card) {
+                                    card.className = 'task-card';
+                                    card.querySelector('.task-status').textContent = 'Error: ' + jsonData.error;
+                                }
+
+                            } else if (jsonData.type === 'all_complete') {
+                                // All tasks finished - consolidate results from already-collected data
+                                let allText = '';
+                                for (const [category, content] of Object.entries(allResults)) {
+                                    allText += `\n\n=== ${category.toUpperCase()} ===\n${content}\n`;
+                                }
+                                thinkingContent.textContent = allText;
+                                currentGameData.raw_unstructured = allText;
+
+                            } else if (jsonData.type === 'error') {
+                                alert('Error: ' + jsonData.message);
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('Stream error:', error);
+                // Don't alert user - they already have the data from completed tasks
+            }
+        }
+
+        async function finalPrediction() {
+            try {
+                const response = await fetch('/api/module2/summarize_and_predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...currentGameData,
+                        structured_data: currentGameData.structured_data
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    completePredictionProgress(true, 'Prediction results generated');
+                    displayFinalResults(data);
+                    document.getElementById('resultsSection').classList.add('show');
+                    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    completePredictionProgress(false, 'Prediction failed');
+                    alert('Prediction failed: ' + data.message);
+                }
+            } catch (error) {
+                completePredictionProgress(false, 'Prediction failed');
+                alert('Final prediction failed: ' + error.message);
+            }
+        }
+
+        function displayFinalResults(data) {
+            const { prediction, top_factors, unstructured_summary, actual_result } = data;
+
+            // Display prediction
+            const homeDisplay = document.getElementById('homeTeamDisplay');
+            const awayDisplay = document.getElementById('awayTeamDisplay');
+
+            homeDisplay.querySelector('.team-name').textContent = prediction.home_team;
+            homeDisplay.querySelector('.probability').textContent = `${prediction.home_win_probability}%`;
+            awayDisplay.querySelector('.team-name').textContent = prediction.away_team;
+            awayDisplay.querySelector('.probability').textContent = `${prediction.away_win_probability}%`;
+
+            if (prediction.winner === 'home') {
+                homeDisplay.classList.add('winner');
+                awayDisplay.classList.remove('winner');
+            } else {
+                awayDisplay.classList.add('winner');
+                homeDisplay.classList.remove('winner');
+            }
+
+            // Display actual result
+            document.getElementById('actualResult').innerHTML = actual_result
+                ? `<div class="actual-result">Actual Winner: ${actual_result.winner_name}</div>`
+                : '';
+
+            // Display factors
+            const factorsList = document.getElementById('factorsList');
+            factorsList.innerHTML = top_factors.map(factor => `
+                <li class="factor-item">
+                    <div class="factor-header">
+                        <div class="factor-rank">${factor.rank}</div>
+                        <div class="factor-name">${factor.factor}</div>
+                        <span class="factor-tag ${factor.type}">${factor.type === 'structured' ? 'Statistical' : 'News & Context'}</span>
+                    </div>
+                    <div class="factor-description">${factor.description}</div>
+                </li>
+            `).join('');
+
+            // Display summaries
+            document.getElementById('injurySummary').textContent = unstructured_summary.injury_reports || 'No injury data available';
+            document.getElementById('newsSummary').textContent = unstructured_summary.pregame_news || 'No news available';
+            document.getElementById('tacticalSummary').textContent = unstructured_summary.tactical_analysis || 'No tactical analysis available';
+        }
+
+        function toggleThinking() {
+            const content = document.getElementById('thinkingContent');
+            const icon = document.getElementById('collapseIcon');
+
+            content.classList.toggle('collapsed');
+            icon.classList.toggle('collapsed');
+        }
+    </script>
+</body>
+</html>

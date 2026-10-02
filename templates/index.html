@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Game Prediction - Custom Data Online Prediction Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-weight: 300;
+            background-color: #F7F4EF;
+            color: #1F2421;
+            line-height: 1.6;
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            background: rgba(251, 249, 245, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid #E7E1D7;
+            padding: 1rem 2rem;
+            z-index: 100;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.5rem;
+            font-weight: 400;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-title em {
+            font-style: italic;
+            color: #C4612F;
+        }
+
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 1.5rem;
+        }
+
+        .nav-links a {
+            color: #5C635D;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: #C4612F;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 42px;
+            font-weight: 400;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+            color: #1F2421;
+        }
+
+        h1 em {
+            font-style: italic;
+            color: #C4612F;
+        }
+
+        .subtitle {
+            color: #5C635D;
+            font-size: 16px;
+            font-weight: 300;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            background: #F2E3D6;
+            color: #C4612F;
+            padding: 6px 16px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 400;
+            margin-bottom: 16px;
+            letter-spacing: 0.02em;
+        }
+
+        .card {
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
+            border: 1px solid #E7E1D7;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .card h2 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 24px;
+            font-weight: 400;
+            margin-bottom: 20px;
+            color: #1F2421;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            padding: 0 20px;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .step::before {
+            content: '';
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            right: -50%;
+            height: 2px;
+            background: #E7E1D7;
+            z-index: 0;
+        }
+
+        .step:last-child::before {
+            display: none;
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 999px;
+            background: #FBF9F5;
+            border: 2px solid #E7E1D7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .step.active .step-number {
+            background: #C4612F;
+            border-color: #C4612F;
+            color: white;
+        }
+
+        .step.completed .step-number {
+            background: #F2E3D6;
+            border-color: #C4612F;
+            color: #C4612F;
+        }
+
+        .step-label {
+            font-size: 14px;
+            color: #5C635D;
+            font-weight: 400;
+        }
+
+        .template-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .template-card {
+            background: #FBF9F5;
+            border: 1px solid #E7E1D7;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .template-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-color: #C4612F;
+        }
+
+        .template-card h3 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #1F2421;
+        }
+
+        .template-card p {
+            font-size: 14px;
+            color: #5C635D;
+            margin-bottom: 16px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            border-radius: 999px;
+            font-size: 15px;
+            font-weight: 400;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: #C4612F;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #A94E22;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #FBF9F5;
+            color: #1F2421;
+            border: 1px solid #E7E1D7;
+        }
+
+        .btn-secondary:hover {
+            background: #F2E3D6;
+        }
+
+        .upload-area {
+            border: 2px dashed #E7E1D7;
+            border-radius: 12px;
+            padding: 48px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #FBF9F5;
+        }
+
+        .upload-area:hover {
+            border-color: #C4612F;
+            background: #F2E3D6;
+        }
+
+        .upload-area.dragging {
+            border-color: #C4612F;
+            background: #F2E3D6;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #C4612F;
+            margin-bottom: 16px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .model-option {
+            background: #FBF9F5;
+            border: 2px solid #E7E1D7;
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .model-option:hover {
+            border-color: #C4612F;
+        }
+
+        .model-option.selected {
+            border-color: #C4612F;
+            background: #F2E3D6;
+        }
+
+        .model-option input[type="checkbox"] {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+        }
+
+        .model-type-badge {
+            display: inline-block;
+            background: #F2E3D6;
+            color: #C4612F;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .model-name {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #1F2421;
+        }
+
+        .model-desc {
+            font-size: 13px;
+            color: #5C635D;
+            line-height: 1.5;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .result-card {
+            background: #FBF9F5;
+            border: 1px solid #E7E1D7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #E7E1D7;
+        }
+
+        .result-model-name {
+            font-size: 18px;
+            font-weight: 500;
+            color: #1F2421;
+        }
+
+        .prediction-item {
+            background: white;
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            border: 1px solid #E7E1D7;
+        }
+
+        .match-info {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #1F2421;
+        }
+
+        .prediction-result {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .winner {
+            color: #C4612F;
+            font-weight: 500;
+        }
+
+        .probability {
+            display: flex;
+            gap: 16px;
+            font-size: 14px;
+            color: #5C635D;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 3px solid #E7E1D7;
+            border-top: 3px solid #C4612F;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #E7E1D7;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #C4612F;
+            transition: width 0.3s ease;
+        }
+
+        .message {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #F2E3D6;
+            color: #C4612F;
+            border: 1px solid #E7E1D7;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-content">
+            <div class="nav-title">NBA <em>Prediction</em> Platform</div>
+            <div class="nav-links">
+                <a href="/" class="active" aria-current="page">Module 1</a>
+                <a href="/module2">Module 2</a>
+                <a href="/module3">Module 3</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header>
+            <h1>NBA Game <em>Intelligence</em> Prediction Platform</h1>
+            <p class="subtitle">Custom Data Online Prediction Tool · Lightweight Prediction Solution Based on Multi-Model Fusion</p>
+        </header>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step active" id="step1">
+                <div class="step-number">1</div>
+                <div class="step-label">Download Template</div>
+            </div>
+            <div class="step" id="step2">
+                <div class="step-number">2</div>
+                <div class="step-label">Upload Data</div>
+            </div>
+            <div class="step" id="step3">
+                <div class="step-number">3</div>
+                <div class="step-label">Select Models</div>
+            </div>
+            <div class="step" id="step4">
+                <div class="step-number">4</div>
+                <div class="step-label">View Results</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Download Template -->
+        <div class="card" id="section1">
+            <h2>Step 1: Download Data Template</h2>
+            <p style="color: #5C635D; margin-bottom: 24px;">
+                Platform provides two standard templates, strictly aligned with pre-trained model input feature specifications
+            </p>
+            <div class="template-section">
+                <div class="template-card">
+                    <div class="model-type-badge">Cross-sectional Data</div>
+                    <h3>Single Game Template</h3>
+                    <p>Compatible with traditional ML models and MLP neural networks, includes team basic statistics and advanced efficiency metrics</p>
+                    <button class="btn btn-primary" onclick="downloadTemplate('single')">
+                        📥 Download Template
+                    </button>
+                </div>
+                <div class="template-card">
+                    <div class="model-type-badge">Time Series Data</div>
+                    <h3>Time Series Template</h3>
+                    <p>Compatible with LSTM/GRU time series models, input continuous multi-game data, automatic extraction of time series features</p>
+                    <button class="btn btn-primary" onclick="downloadTemplate('sequence')">
+                        📥 Download Template
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Upload Data -->
+        <div class="card" id="section2">
+            <h2>Step 2: Upload Data File</h2>
+            <p style="color: #5C635D; margin-bottom: 24px;">
+                Upload your game data organized according to the template, supports CSV and Excel formats
+            </p>
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">📁</div>
+                <div style="font-size: 16px; margin-bottom: 8px; color: #1F2421;">Click or drag files here to upload</div>
+                <div style="font-size: 14px; color: #5C635D;">Support CSV, XLSX format, max 16MB</div>
+            </div>
+            <input type="file" id="fileInput" class="file-input" accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)">
+
+            <div id="fileInfo" style="display: none; margin-top: 20px;"></div>
+        </div>
+
+        <!-- Step 3: Select Models -->
+        <div class="card" id="section3" style="display: none;">
+            <h2>Step 3: Select Prediction Models</h2>
+            <p style="color: #5C635D; margin-bottom: 24px;">
+                Platform has built-in pre-trained models, supports single or multiple selection for comparison
+            </p>
+            <div class="model-grid" id="modelGrid"></div>
+            <div style="text-align: center; margin-top: 24px;">
+                <button class="btn btn-primary" onclick="startPrediction()" style="padding: 14px 40px; font-size: 16px;">
+                    🚀 Start Prediction
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 4: Prediction Results -->
+        <div class="card results-section" id="section4">
+            <h2>Prediction Results</h2>
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedFilename = null;
+        let selectedModels = [];
+
+        // Initialize
+        window.onload = function() {
+            loadModels();
+            setupDragDrop();
+        };
+
+        // Load model list
+        function loadModels() {
+            fetch('/api/models')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const modelGrid = document.getElementById('modelGrid');
+                        modelGrid.innerHTML = '';
+
+                        Object.keys(data.models).forEach(modelKey => {
+                            const model = data.models[modelKey];
+                            const typeLabels = {
+                                'traditional': 'Traditional ML',
+                                'deep_learning': 'Deep Neural Network',
+                                'time_series': 'Time Series'
+                            };
+
+                            const modelCard = document.createElement('div');
+                            modelCard.className = 'model-option';
+                            modelCard.innerHTML = `
+                                <input type="checkbox" id="model_${modelKey}" value="${modelKey}" onchange="toggleModel('${modelKey}')">
+                                <div class="model-type-badge">${typeLabels[model.type]}</div>
+                                <div class="model-name">${model.name}</div>
+                                <div class="model-desc">${model.description}</div>
+                            `;
+                            modelCard.onclick = function(e) {
+                                if (e.target.type !== 'checkbox') {
+                                    document.getElementById('model_' + modelKey).click();
+                                }
+                            };
+                            modelGrid.appendChild(modelCard);
+                        });
+                    }
+                });
+        }
+
+        // Model selection
+        function toggleModel(modelKey) {
+            const checkbox = document.getElementById('model_' + modelKey);
+            const card = checkbox.parentElement;
+
+            if (checkbox.checked) {
+                card.classList.add('selected');
+                if (!selectedModels.includes(modelKey)) {
+                    selectedModels.push(modelKey);
+                }
+            } else {
+                card.classList.remove('selected');
+                selectedModels = selectedModels.filter(m => m !== modelKey);
+            }
+        }
+
+        // Download template
+        function downloadTemplate(type) {
+            window.location.href = '/api/download_template/' + type;
+
+            // Activate step 2
+            updateStep(2);
+        }
+
+        // Setup drag and drop upload
+        function setupDragDrop() {
+            const uploadArea = document.getElementById('uploadArea');
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragging');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragging');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragging');
+
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+        }
+
+        // File selection
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        // Handle file upload
+        function handleFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            showMessage('info', 'Uploading file...');
+
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    uploadedFilename = data.filename;
+                    showMessage('success', `File uploaded successfully! Total ${data.rows} rows of data`);
+
+                    // Display file info
+                    const fileInfo = document.getElementById('fileInfo');
+                    fileInfo.style.display = 'block';
+                    fileInfo.innerHTML = `
+                        <div class="message info">
+                            <strong>✓ File uploaded successfully</strong><br>
+                            Filename: ${file.name}<br>
+                            Data rows: ${data.rows}<br>
+                            Feature columns: ${data.columns.length}
+                        </div>
+                    `;
+
+                    // Show step 3
+                    document.getElementById('section3').style.display = 'block';
+                    updateStep(3);
+
+                    // Scroll to step 3
+                    document.getElementById('section3').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    showMessage('error', data.message);
+                }
+            })
+            .catch(err => {
+                showMessage('error', 'Upload failed: ' + err.message);
+            });
+        }
+
+        // Start prediction
+        function startPrediction() {
+            if (selectedModels.length === 0) {
+                showMessage('error', 'Please select at least one model');
+                return;
+            }
+
+            if (!uploadedFilename) {
+                showMessage('error', 'Please upload data file first');
+                return;
+            }
+
+            // Show loading state
+            const resultsContainer = document.getElementById('resultsContainer');
+            resultsContainer.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div style="color: #5C635D;">Calling models for prediction...</div>
+                    <div class="progress-bar" style="margin-top: 20px;">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('section4').classList.add('show');
+            document.getElementById('section4').scrollIntoView({ behavior: 'smooth' });
+            updateStep(4);
+
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 5;
+                if (progress >= 90) {
+                    clearInterval(progressInterval);
+                }
+                document.getElementById('progressFill').style.width = progress + '%';
+            }, 200);
+
+            // Call prediction API
+            fetch('/api/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    filename: uploadedFilename,
+                    models: selectedModels
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                clearInterval(progressInterval);
+                document.getElementById('progressFill').style.width = '100%';
+
+                setTimeout(() => {
+                    if (data.success) {
+                        displayResults(data.results);
+                    } else {
+                        resultsContainer.innerHTML = `
+                            <div class="message error">
+                                <strong>Prediction failed</strong><br>
+                                ${data.message}
+                            </div>
+                        `;
+                    }
+                }, 500);
+            })
+            .catch(err => {
+                clearInterval(progressInterval);
+                resultsContainer.innerHTML = `
+                    <div class="message error">
+                        <strong>Prediction failed</strong><br>
+                        ${err.message}
+                    </div>
+                `;
+            });
+        }
+
+        // Display prediction results - organized by game
+        function displayResults(results) {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+
+            // Add summary header
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'message info';
+            summaryDiv.innerHTML = `
+                <strong>✓ Prediction completed</strong><br>
+                Total games: ${results.length} | Models used: ${results[0]?.predictions.length || 0}
+            `;
+            container.appendChild(summaryDiv);
+
+            // Display each game with all model predictions
+            results.forEach((game, idx) => {
+                const gameCard = document.createElement('div');
+                gameCard.className = 'result-card';
+                gameCard.style.marginTop = '20px';
+
+                // Build model predictions HTML
+                let predictionsHtml = '';
+                game.predictions.forEach(pred => {
+                    predictionsHtml += `
+                        <div class="prediction-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; margin-bottom: 8px;">
+                            <div style="flex: 0 0 200px;">
+                                <div style="font-weight: 500; color: #1F2421; font-size: 14px;">${pred.model_name}</div>
+                            </div>
+                            <div style="flex: 1; display: flex; align-items: center; gap: 16px;">
+                                <div style="flex: 1;">
+                                    <span style="color: #5C635D; font-size: 13px;">Winner:</span>
+                                    <span class="winner" style="font-size: 15px;">${pred.winner}</span>
+                                </div>
+                                <div class="probability" style="display: flex; gap: 12px; font-size: 13px;">
+                                    <span style="background: #F2E3D6; padding: 4px 10px; border-radius: 4px;">
+                                        Home: ${pred.home_win_prob.toFixed(1)}%
+                                    </span>
+                                    <span style="background: #FBF9F5; padding: 4px 10px; border-radius: 4px; border: 1px solid #E7E1D7;">
+                                        Away: ${pred.away_win_prob.toFixed(1)}%
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                gameCard.innerHTML = `
+                    <div class="result-header">
+                        <div>
+                            <div style="font-size: 12px; color: #5C635D; margin-bottom: 4px;">Game ${idx + 1}</div>
+                            <div class="match-info" style="font-size: 18px; font-weight: 500; color: #1F2421;">
+                                ${game.home_team} <span style="color: #5C635D; font-weight: 300;">vs</span> ${game.away_team}
+                            </div>
+                        </div>
+                        <div style="background: #F2E3D6; color: #C4612F; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 500;">
+                            ${game.predictions.length} models
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        ${predictionsHtml}
+                    </div>
+                `;
+
+                container.appendChild(gameCard);
+            });
+        }
+
+        // Update step status
+        function updateStep(stepNum) {
+            for (let i = 1; i <= 4; i++) {
+                const step = document.getElementById('step' + i);
+                step.classList.remove('active', 'completed');
+
+                if (i < stepNum) {
+                    step.classList.add('completed');
+                } else if (i === stepNum) {
+                    step.classList.add('active');
+                }
+            }
+        }
+
+        // Display message
+        function showMessage(type, message) {
+            const existingMessage = document.querySelector('.message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + type;
+            messageDiv.textContent = message;
+
+            const section2 = document.getElementById('section2');
+            section2.insertBefore(messageDiv, section2.firstChild);
+
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
