@@ -92,7 +92,7 @@ MAX_WORKERS = int(os.environ.get("NBA_MAX_WORKERS", 10))
 # Primary JSON-completion gateway (OpenAI-compatible chat/completions surface).
 COMPLETION_GATEWAY_API_KEY = os.environ.get(
     "NBA_COMPLETION_API_KEY",
-    "sk-rHa4hQLoPiQpGl7imxu6lp1nLjxtdyxcGf3j1afaCOKV1grE",
+    "NBA_COMPLETION_API_KEY",
 )
 COMPLETION_GATEWAY_ENDPOINT = os.environ.get(
     "NBA_COMPLETION_ENDPOINT",
@@ -103,7 +103,7 @@ COMPLETION_GATEWAY_MODEL = os.environ.get("NBA_COMPLETION_MODEL", "gpt-5.5")
 # Secondary reasoning gateway with hosted web-search tooling.
 SEARCH_GATEWAY_API_KEY = os.environ.get(
     "NBA_SEARCH_API_KEY",
-    "sk-7802ae9cf2764f09ad074fe23bcbe74c",
+    "NBA_SEARCH_API_KEY",
 )
 SEARCH_GATEWAY_ENDPOINT = os.environ.get(
     "NBA_SEARCH_ENDPOINT",
