@@ -100,7 +100,6 @@ COMPLETION_GATEWAY_ENDPOINT = os.environ.get(
 )
 COMPLETION_GATEWAY_MODEL = os.environ.get("NBA_COMPLETION_MODEL", "gpt-5.5")
 
-
 # Secondary reasoning gateway with hosted web-search tooling.
 SEARCH_GATEWAY_API_KEY = os.environ.get(
     "NBA_SEARCH_API_KEY",
